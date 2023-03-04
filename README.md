@@ -1,6 +1,6 @@
 #	UUID4.jl
-[![CI status](https://github.com/0h7z/uuid4.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/0h7z/uuid4.jl/actions/workflows/CI.yml)
-[![codecov.io](https://codecov.io/gh/0h7z/uuid4.jl/branch/master/graph/badge.svg)](https://app.codecov.io/gh/0h7z/uuid4.jl)
+[![CI status](https://github.com/0h7z/UUID4.jl/actions/workflows/CI.yml/badge.svg)](https://github.com/0h7z/UUID4.jl/actions/workflows/CI.yml)
+[![codecov.io](https://codecov.io/gh/0h7z/UUID4.jl/branch/master/graph/badge.svg)](https://app.codecov.io/gh/0h7z/UUID4.jl)
 
 *****
 ##	Usage
