@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2023 Heptazhou <zhou@0h7z.com>
+# Copyright (C) 2022-2024 Heptazhou <zhou@0h7z.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+using OrderedCollections: LittleDict, OrderedDict
 using Random: Random
 using Test, UUID4
 
@@ -40,7 +41,7 @@ str = "22b4a8a1-e548-4eeb-9270-60426d66a48e"
 @test_throws ArgumentError UUID("22b4a8a1-e548-4eeba9270-60426d66a48e")
 @test_throws ArgumentError UUID("22b4a8a1-e548-4eeb-9270a60426d66a48e")
 @test UUID(uppercase(str)) == UUID(str)
-for r in (rand(UInt128, 10^3))
+for r ∈ rand(UInt128, 10^3)
 	@test UUID(r) == UUID(string(UUID(r)))
 end
 
@@ -58,9 +59,10 @@ d_o, d_u = OrderedDict(vec), Dict(vec)
 u = UUID(d_u[36])
 s = GenericString(string(u))
 
+@test uuid_tryparse("") |> isnothing
 @test uuid_parse(s) == uuid_parse(u) == (36, u)
 @test uuid_formats() == d_o.keys == fmt
-for n in fmt
+for n ∈ fmt
 	@test (n, u) == uuid_parse(d_u[n]) == uuid_parse(d_u[n] |> GenericString)
 	@test d_u[n] == uuid_string(n, u) == uuid_string(u, n |> UInt32) == d_o[n]
 	@test d_o[n] == uuid_string(n, u |> string) == uuid_string(u |> string, n)
@@ -71,9 +73,10 @@ end
 @test_throws ArgumentError uuid_parse(d_u[32], fmt = 42)
 @test_throws ArgumentError uuid_parse(d_u[32]^2)
 
+@test uuid_string(u, LittleDict) == uuid_string(LittleDict, u)
 @test uuid_string(u, OrderedDict) == uuid_string(OrderedDict, u)
 @test uuid_string(u) == uuid_string(Dict, u) == d_u == Dict(d_o)
-@test uuid_string(u) == uuid_string(Dict, s) == uuid_string(s, Dict)
+@test uuid_string(u) == uuid_string(s, Dict) == uuid_string(Dict, s)
 @test_throws ArgumentError uuid_string(u, -1)
 @test_throws ArgumentError uuid_string(u, 42)
 

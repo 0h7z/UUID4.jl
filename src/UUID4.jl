@@ -1,4 +1,4 @@
-# Copyright (C) 2022-2023 Heptazhou <zhou@0h7z.com>
+# Copyright (C) 2022-2024 Heptazhou <zhou@0h7z.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,29 +16,31 @@
 """
 	UUID4
 
-The `UUID4` module provides universally unique identifier (UUID), version 4,
+This module provides universally unique identifier (UUID) version 4,
 along with related functions.
 """
 module UUID4
 
 export uuid, uuid4
+
 export uuid_formats
 export uuid_parse
 export uuid_string
+export uuid_tryparse
 export uuid_version
 
 export AbstractRNG, MersenneTwister, RandomDevice
-export LittleDict, OrderedDict
 export UUID
+
+const Maybe{T} = Union{Nothing, T}
 const UUID = Base.UUID
-using OrderedCollections: LittleDict, OrderedDict
 using Random: AbstractRNG, MersenneTwister, RandomDevice
 
 """
-	uuid(rng::AbstractRNG = RandomDevice()) -> UUID
+	uuid(rng::AbstractRNG = Random.RandomDevice()) -> UUID
 
-Generate a version 4 (random or pseudo-random) universally unique identifier
-(UUID), as specified by [RFC 4122](https://www.ietf.org/rfc/rfc4122).
+Generate a version 4 (random or pseudo-random) universally unique identifier (UUID),
+as specified by [RFC 4122](https://tools.ietf.org/html/rfc4122).
 
 # Examples
 ```jldoctest
@@ -76,39 +78,22 @@ function uuid_formats()::Vector{Int}
 end
 
 """
-	uuid_parse(str::String; fmt::Int = length(str)) -> Tuple{Int, UUID}
+	uuid_parse(str::AbstractString; fmt::Int = length(str)) -> Tuple{Int, UUID}
 """
 function uuid_parse end
-function uuid_parse(str::UUID; fmt::Any = 0x0)::Tuple{Int, UUID}
-	uuid_parse(string(str); fmt = Int(fmt))
+function uuid_parse(id::UUID)::Tuple{Int, UUID}
+	(length("$id"), id) # (36, id)
 end
-function uuid_parse(str::Any; fmt::Number = 0)::Tuple{Int, UUID}
-	uuid_parse(String(str); fmt = Int(fmt))
-end
-function uuid_parse(str::String; fmt::Int = 0)::Tuple{Int, UUID}
+function uuid_parse(str::AbstractString; fmt::Int = 0)::Tuple{Int, UUID}
 	len = length(str)
-	ret = if 0 > fmt
-		argumenterror("Invalid format `$fmt` (should be positive)")
-	elseif len ≠ fmt > 0
-		argumenterror("Invalid id `$str` with length = $len (should be $fmt)")
-	elseif len ≡ 24
-		uuid_parse(replace((str), "-" => ""), fmt = 22)[end]
-	elseif len ≡ 29
-		uuid_parse(replace((str), "-" => ""), fmt = 25)[end]
-	elseif len ≡ 39
-		uuid_parse(replace((str), "-" => ""), fmt = 32)[end]
-	elseif len ≡ 22
-		UUID(parse(UInt128, str, base = 62))
-	elseif len ≡ 25
-		UUID(parse(UInt128, str, base = 36))
-	elseif len ≡ 32
-		UUID(parse(UInt128, str, base = 16))
-	elseif len ≡ 36
-		UUID(str)
-	else
+	(id = uuid_tryparse(str)) |> isnothing &&
 		argumenterror("Invalid id `$str` with length = $len")
+	if 0 < fmt ≠ len
+		argumenterror("Invalid id `$str` with length = $len (should be $fmt)")
+	elseif fmt < 0
+		argumenterror("Invalid format `$fmt` (should be positive)")
 	end
-	len, ret
+	len, id |> UUID
 end
 
 """
@@ -159,33 +144,38 @@ function uuid_string(fmt::Int, id::UUID = uuid())::String
 	uuid_string(id, fmt)
 end
 function uuid_string(id::UUID, fmt::Int)::String
-	if 0 ≥ fmt
-		argumenterror("Invalid format `$fmt` (should be positive)")
-	elseif fmt ≡ 36
-		string(id)
-	elseif fmt ≡ 22
-		string(id.value, base = 62, pad = fmt)
-	elseif fmt ≡ 25
-		string(id.value, base = 36, pad = fmt)
-	elseif fmt ≡ 32
-		string(id.value, base = 16, pad = fmt)
-	elseif fmt ≡ 24
-		replace(uuid_string(id, 22), r"(.{7})" => s"\1-", count = fmt - 22)
-	elseif fmt ≡ 29
-		replace(uuid_string(id, 25), r"(.{5})" => s"\1-", count = fmt - 25)
-	elseif fmt ≡ 39
-		replace(uuid_string(id, 32), r"(.{4})" => s"\1-", count = fmt - 32)
-	else
-		argumenterror("Invalid format `$fmt` (undefined)")
-	end
+	fmt ≤ 0 ?
+	argumenterror("Invalid format `$fmt` (should be positive)") :
+	fmt ≡ 36 ? string(id) :
+	fmt ≡ 22 ? string(id.value, base = 62, pad = fmt) :
+	fmt ≡ 25 ? string(id.value, base = 36, pad = fmt) :
+	fmt ≡ 32 ? string(id.value, base = 16, pad = fmt) :
+	fmt ≡ 24 ? replace(uuid_string(id, 22), r"(.{7})" => s"\1-", count = fmt - 22) :
+	fmt ≡ 29 ? replace(uuid_string(id, 25), r"(.{5})" => s"\1-", count = fmt - 25) :
+	fmt ≡ 39 ? replace(uuid_string(id, 32), r"(.{4})" => s"\1-", count = fmt - 32) :
+	argumenterror("Invalid format `$fmt` (not defined)")
 end
 
 """
-	uuid_version(id::String) -> Int
-	uuid_version(id::UUID)   -> Int
+	uuid_tryparse(s::AbstractString) -> Maybe{Union{UInt128, UUID}}
+"""
+function uuid_tryparse(str::AbstractString)::Maybe{Union{UInt128, UUID}}
+	len = ncodeunits(str)
+	len ≡ 24 ? uuid_tryparse(replace(str, "-" => "")) :
+	len ≡ 29 ? uuid_tryparse(replace(str, "-" => "")) :
+	len ≡ 39 ? uuid_tryparse(replace(str, "-" => "")) :
+	len ≡ 22 ? Base.tryparse(UInt128, str, base = 62) :
+	len ≡ 25 ? Base.tryparse(UInt128, str, base = 36) :
+	len ≡ 32 ? Base.tryparse(UInt128, str, base = 16) :
+	len ≡ 36 ? Base.tryparse(UUID, str) : nothing
+end
 
-Inspect the given UUID or UUID string and return its version (see [RFC
-4122](https://www.ietf.org/rfc/rfc4122)).
+"""
+	uuid_version(id::AbstractString) -> Int
+	uuid_version(id::UUID)           -> Int
+
+Inspect the given UUID or UUID string and return its version
+(see [RFC 4122](https://tools.ietf.org/html/rfc4122)).
 
 # Examples
 ```jldoctest
@@ -194,9 +184,8 @@ julia> uuid_version(uuid())
 ```
 """
 function uuid_version end
-uuid_version(id::Any)::Int    = uuid_version(String(id))
-uuid_version(id::String)::Int = uuid_version(uuid_parse(id)[end])
-uuid_version(id::UUID)::Int   = Int(id.value >> 76 & 0xf)
+uuid_version(id::Any)::Int  = uuid_version(uuid_parse(id)[end])
+uuid_version(id::UUID)::Int = id.value >> 76 & 0xf |> Int
 
 @noinline argumenterror(msg::AbstractString) = throw(ArgumentError(msg))
 
