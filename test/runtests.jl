@@ -42,7 +42,9 @@ str = "22b4a8a1-e548-4eeb-9270-60426d66a48e"
 @test_throws ArgumentError UUID("22b4a8a1-e548-4eeb-9270a60426d66a48e")
 @test UUID(uppercase(str)) == UUID(str)
 for r ∈ rand(UInt128, 10^3)
-	@test UUID(r) == UUID(string(UUID(r)))
+	s = string(UUID(r))
+	@test UUID(r) == UUID(s)
+	@test ncodeunits(s) === length(s) === 36
 end
 
 fmt = [22, 24, 25, 29, 32, 36, 39]

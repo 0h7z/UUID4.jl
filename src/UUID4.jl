@@ -78,18 +78,18 @@ function uuid_formats()::Vector{Int}
 end
 
 """
-	uuid_parse(str::AbstractString; fmt::Int = length(str)) -> Tuple{Int, UUID}
+	uuid_parse(str::AbstractString; fmt::Int = ncodeunits(str)) -> Tuple{Int, UUID}
 """
 function uuid_parse end
 function uuid_parse(id::UUID)::Tuple{Int, UUID}
-	(length("$id"), id) # (36, id)
+	(36, id)
 end
 function uuid_parse(str::AbstractString; fmt::Int = 0)::Tuple{Int, UUID}
-	len = length(str)
+	len = ncodeunits(str)
 	(id = uuid_tryparse(str)) |> isnothing &&
-		argumenterror("Invalid id `$str` with length = $len")
+		argumenterror("Invalid id `$str` with ncodeunits = $len")
 	if 0 < fmt ≠ len
-		argumenterror("Invalid id `$str` with length = $len (should be $fmt)")
+		argumenterror("Invalid id `$str` with ncodeunits = $len (should be $fmt)")
 	elseif fmt < 0
 		argumenterror("Invalid format `$fmt` (should be positive)")
 	end
@@ -147,27 +147,41 @@ function uuid_string(id::UUID, fmt::Int)::String
 	fmt ≤ 0 ?
 	argumenterror("Invalid format `$fmt` (should be positive)") :
 	fmt ≡ 36 ? string(id) :
-	fmt ≡ 22 ? string(id.value, base = 62, pad = fmt) :
-	fmt ≡ 25 ? string(id.value, base = 36, pad = fmt) :
-	fmt ≡ 32 ? string(id.value, base = 16, pad = fmt) :
-	fmt ≡ 24 ? replace(uuid_string(id, 22), r"(.{7})" => s"\1-", count = fmt - 22) :
-	fmt ≡ 29 ? replace(uuid_string(id, 25), r"(.{5})" => s"\1-", count = fmt - 25) :
-	fmt ≡ 39 ? replace(uuid_string(id, 32), r"(.{4})" => s"\1-", count = fmt - 32) :
+	fmt ≡ 22 ? string(id.value, base = 62, pad = 22) :
+	fmt ≡ 25 ? string(id.value, base = 36, pad = 25) :
+	fmt ≡ 32 ? string(id.value, base = 16, pad = 32) :
+	fmt ≡ 24 ? replace(uuid_string(id, 22), r"(.{7})" => s"\1-", count = 2) :
+	fmt ≡ 29 ? replace(uuid_string(id, 25), r"(.{5})" => s"\1-", count = 4) :
+	fmt ≡ 39 ? replace(uuid_string(id, 32), r"(.{4})" => s"\1-", count = 7) :
 	argumenterror("Invalid format `$fmt` (not defined)")
 end
 
 """
 	uuid_tryparse(s::AbstractString) -> Maybe{Union{UInt128, UUID}}
 """
+function uuid_tryparse end
+let
+#! format: noindent
+
+function dropdash(str::AbstractString; step::Int, count::Int)
+	for i ∈ 1:count
+		@inbounds UInt8('-') ≠ codeunit(str, (1 + step)i) && return ""
+	end
+	replace(str, "-" => ""; count)
+end
+
 function uuid_tryparse(str::AbstractString)::Maybe{Union{UInt128, UUID}}
 	len = ncodeunits(str)
-	len ≡ 24 ? uuid_tryparse(replace(str, "-" => "")) :
-	len ≡ 29 ? uuid_tryparse(replace(str, "-" => "")) :
-	len ≡ 39 ? uuid_tryparse(replace(str, "-" => "")) :
+	len ≡ 24 ? uuid_tryparse(dropdash(str, step = 7, count = 2)) :
+	len ≡ 29 ? uuid_tryparse(dropdash(str, step = 5, count = 4)) :
+	len ≡ 39 ? uuid_tryparse(dropdash(str, step = 4, count = 7)) :
 	len ≡ 22 ? Base.tryparse(UInt128, str, base = 62) :
 	len ≡ 25 ? Base.tryparse(UInt128, str, base = 36) :
 	len ≡ 32 ? Base.tryparse(UInt128, str, base = 16) :
-	len ≡ 36 ? Base.tryparse(UUID, str) : nothing
+	len ≡ 36 ? Base.tryparse(UUID, str) : (nothing)
+end
+
+global uuid_tryparse
 end
 
 """
