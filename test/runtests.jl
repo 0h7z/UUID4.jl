@@ -17,6 +17,19 @@ using OrderedCollections: LittleDict, OrderedDict
 using Random: Random
 using Test, UUID4
 
+parse(Bool, get(ENV, "CI", "0")) || cd(@__DIR__) do
+	cp("./Project.toml", "../docs/Project.toml", force = true)
+	fs = [
+		"../README.md"
+		"../docs/src/api.md"
+	]
+	md = join(readchomp.(fs), "\n$("*"^5)\n")
+	md = replace(md, r"^#+\K\s+"m => " ")
+	write("../docs/src/index.md", md, "\n")
+
+	include("../docs/make.jl")
+end
+
 u4 = uuid4()
 @test 4 == uuid_version(u4)
 @test 4 == uuid_version(u4 |> string)

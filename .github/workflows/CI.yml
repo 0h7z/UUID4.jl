@@ -28,9 +28,6 @@ jobs:
           - "1.6"
           - "1"
           - "nightly"
-        exclude:
-          - os: macos-latest
-            julia-version: nightly
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,3 +44,20 @@ jobs:
       - uses: codecov/codecov-action@v3.1.5
         with:
           file: lcov.info
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      statuses: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: julia-actions/setup-julia@v2
+        with:
+          show-versioninfo: true
+          version: "1"
+      - uses: julia-actions/julia-docdeploy@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
