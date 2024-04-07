@@ -14,8 +14,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 using OrderedCollections: LittleDict, OrderedDict
-using Random: Random
 using Test, UUID4
+using UUID4: Random
 
 parse(Bool, get(ENV, "CI", "0")) || cd(@__DIR__) do
 	cp("./Project.toml", "../docs/Project.toml", force = true)
@@ -37,7 +37,7 @@ u4 = uuid4()
 @test 4 == uuid_version(u4 |> string |> s -> replace(s, "-" => ""))
 @test u4 == UUID(string(u4)) == UUID(GenericString(string(u4)))
 @test u4 == UUID(UInt128(u4))
-@test uuid4(MersenneTwister(0)) == uuid4(MersenneTwister(0))
+@test uuid4(Random.MersenneTwister(0)) == uuid4(Random.MersenneTwister(0))
 @test_throws ArgumentError UUID("550e8400e29b-41d4-a716-446655440000")
 @test_throws ArgumentError UUID("550e8400e29b-41d4-a716-44665544000098")
 @test_throws ArgumentError UUID("z50e8400-e29b-41d4-a716-446655440000")

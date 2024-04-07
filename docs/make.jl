@@ -5,6 +5,7 @@ DocMeta.setdocmeta!(UUID4, :DocTestSetup, quote
 #! format: noindent
 using OrderedCollections
 using UUID4
+using UUID4: Random
 end)
 
 @info "doctest"
@@ -12,7 +13,6 @@ Documenter.doctest(UUID4, fix = true, manual = false)
 
 @info "makedocs"
 Documenter.makedocs(
-	doctest   = false,
 	format    = Documenter.HTML(),
 	modules   = [UUID4],
 	pages     = ["Manual" => "index.md"],

@@ -29,39 +29,53 @@ export uuid_string
 export uuid_tryparse
 export uuid_version
 
-export AbstractRNG, MersenneTwister, RandomDevice
 export UUID
 
 const Maybe{T} = Union{Nothing, T}
 const UUID = Base.UUID
-using Random: AbstractRNG, MersenneTwister, RandomDevice
+using Random: Random
+
+@doc "	Maybe{T} -> Union{Nothing, T}" Maybe
+@doc "	UUID -> Base.UUID" UUID
 
 """
-	uuid(rng::AbstractRNG = Random.RandomDevice()) -> UUID
+	uuid(rng::Random.AbstractRNG = Random.RandomDevice()) -> UUID
 
 Generate a version 4 (random or pseudo-random) universally unique identifier (UUID),
 as specified by [RFC 4122](https://tools.ietf.org/html/rfc4122).
 
 # Examples
 ```jldoctest
-julia> rng = MersenneTwister(42);
+julia> rng = Random.MersenneTwister(42);
 
 julia> uuid(rng)
 UUID("bc8f8f98-a497-45c4-817b-b034d1a24a0e")
 ```
 """
-function uuid(rng::AbstractRNG = RandomDevice())::UUID
+function uuid(rng::Random.AbstractRNG = Random.RandomDevice())::UUID
 	id = rand(rng, UInt128)
 	id &= 0xffffffffffff0fff3fffffffffffffff
 	id |= 0x00000000000040008000000000000000
 	id |> UUID
 end
-const uuid4 = uuid
+@doc "	uuid4 -> uuid" const uuid4 = uuid
 
 """
 	uuid_formats() -> Vector{Int}
 
-Return all supported UUID string formats.
+Return all $(length(UUID4.uuid_formats())) supported UUID string formats.
+
+```julia
+# case-sensitive
+22 # (base62) 22
+24 # (base62) 7-7-8
+# case-insensitive
+25 # (base36) 25
+29 # (base36) 5-5-5-5-5
+32 # (base16) 32
+36 # (base16) 8-4-4-4-12
+39 # (base16) 4-4-4-4-4-4-4-4
+```
 """
 function uuid_formats()::Vector{Int}
 	[
